@@ -22,13 +22,38 @@ from django.db import transaction
 
 from planner.paginations import CustomPagination
 
+from rest_framework_simplejwt.authentication import JWTAuthentication
+
+from authentication.permission import IsAdmin,IsCoordinator,IsDeveloper
+
+from rest_framework.permissions import IsAuthenticated
+
 class ProjectListCreateView(ListCreateAPIView):
 
-    pagination_class =CustomPagination
+    pagination_class = CustomPagination
 
     queryset = Project.objects.filter(active_status = True)
 
     serializer_class = ProjectSerializer
+
+    http_method_names = ['get','post']
+
+    permission_classes = [JWTAuthentication]
+
+    def get_permissions(self):
+
+        permissions = []
+
+        if self.request.method in ['POST'] :
+
+            permissions = [IsAdmin]
+
+        else :
+
+            permissions = [IsAuthenticated]
+
+        return [permission() for permission in permissions]
+
 
 
 class ProjectsRetrieveUpdateDestroyView(RetrieveUpdateDestroyAPIView):
@@ -38,6 +63,25 @@ class ProjectsRetrieveUpdateDestroyView(RetrieveUpdateDestroyAPIView):
     queryset = Project.objects.filter(active_status = True)
     
     serializer_class = ProjectSerializer
+
+    http_method_names = ['get','patch','delete']
+
+    permission_classes = [JWTAuthentication]
+
+    def get_permissions(self):
+
+        permissions = []
+
+        if self.request.method in ['PATCH','DELETE'] :
+
+            permissions = [IsAdmin]
+
+        else :
+
+            permissions = [IsAuthenticated]
+
+        return [permission() for permission in permissions]
+
 
     def perform_destroy(self, instance):
 
@@ -53,6 +97,25 @@ class AssignedProjectListCreateView(ListCreateAPIView):
 
     serializer_class = AssignedProjectSerializers
 
+    http_method_names = ['get','post']
+
+    permission_classes = [JWTAuthentication]
+
+    def get_permissions(self):
+
+        permissions = []
+
+        if self.request.method in ['POST'] :
+
+            permissions = [IsAdmin]
+
+        else :
+
+            permissions = [IsAuthenticated]
+
+        return [permission() for permission in permissions]
+
+
 
 class AssignedProjectsRetrieveUpdateDestroyView(RetrieveUpdateDestroyAPIView):
 
@@ -61,6 +124,25 @@ class AssignedProjectsRetrieveUpdateDestroyView(RetrieveUpdateDestroyAPIView):
     queryset = AssignedProject.objects.filter(active_status = True).select_related('project','coordinator').prefetch_related('developers')
 
     serializer_class = AssignedProjectSerializers
+
+    http_method_names = ['get','patch','delete']
+
+    permission_classes = [JWTAuthentication]
+
+    def get_permissions(self):
+
+        permissions = []
+
+        if self.request.method in ['PATCH','DELETE'] :
+
+            permissions = [IsAdmin]
+
+        else :
+
+            permissions = [IsAuthenticated]
+
+        return [permission() for permission in permissions]
+
 
     def perform_destroy(self, instance):
 
@@ -79,6 +161,7 @@ class TaskListCreateView(ListCreateAPIView):
         uuid = self.request.query_params.get('project')
 
         if uuid:
+            
             assigned_project = AssignedProject.objects.get(uuid=uuid,active_status=True)
 
             return assigned_project.assigned_tasks.filter(active_status=True).select_related('assigned_project', 'assigned_to')
@@ -86,6 +169,25 @@ class TaskListCreateView(ListCreateAPIView):
         return Task.objects.none()
 
     serializer_class = TaskSerializer
+
+    http_method_names = ['get','post']
+
+    permission_classes = [JWTAuthentication]
+
+    def get_permissions(self):
+
+        permissions = []
+
+        if self.request.method in ['POST'] :
+
+            permissions = [IsCoordinator]
+
+        else :
+
+            permissions = [IsAuthenticated]
+
+        return [permission() for permission in permissions]
+
 
 
 class TaskRetrieveUpdateDestroyView(RetrieveUpdateDestroyAPIView):
@@ -96,13 +198,48 @@ class TaskRetrieveUpdateDestroyView(RetrieveUpdateDestroyAPIView):
 
     serializer_class = TaskSerializer
 
+    http_method_names = ['get','patch','delete']
+
+    permission_classes = [JWTAuthentication]
+
+    def get_permissions(self):
+
+        permissions = []
+
+        if self.request.method in ['PATCH','DELETE'] :
+
+            permissions = [IsCoordinator]
+
+        else :
+
+            permissions = [IsAuthenticated]
+
+        return [permission() for permission in permissions]
+
+
     def perform_destroy(self, instance):
 
         instance.active_status = False
 
         instance.save()
 
+
 class TaskCreateWithAI(APIView):
+
+    http_method_names = ['post']
+
+    permission_classes = [JWTAuthentication]
+
+    def get_permissions(self):
+
+        permissions = []
+
+        if self.request.method in ['POST'] :
+
+            permissions = [IsCoordinator]
+
+        return [permission() for permission in permissions]
+
 
     # pagination_class = CustomPagination
 
